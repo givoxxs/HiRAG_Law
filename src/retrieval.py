@@ -44,6 +44,7 @@ class EnhancedQueryEngine:
         )
 
         all_results = []
+        all_extracts = []
 
         for i, query_str in enumerate(queries, 1):
             print(f"\n📋 Query {i}/{len(queries)}: {query_str}")
@@ -55,14 +56,21 @@ class EnhancedQueryEngine:
             llm_response = self.basic_query_engine.query(query_str)
 
             # Format combined result
-            answer, result = self._format_structured_response(
+            answer, extract = self._format_structured_response(
                 query_str, structured_info, str(llm_response)
             )
             all_results.append(answer)
+            all_extracts.append(extract)
 
-        return "\n\n" + "=" * 80 + "\n\n".join(
-            all_results
-        ), "\n\n" + "=" * 80 + "\n\n".join(result)
+        # For single query, return just the result
+        if len(queries) == 1:
+            return all_results[0]
+
+        # For multiple queries, return combined results
+        combined_results = "\n\n" + "=" * 80 + "\n\n".join(all_results)
+        combined_extracts = "\n\n" + "=" * 80 + "\n\n".join(all_extracts)
+
+        return combined_results, combined_extracts
 
     def _extract_global_bridge_local(self, query_str: str) -> Dict[str, Any]:
         """

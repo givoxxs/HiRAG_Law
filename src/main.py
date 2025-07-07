@@ -16,6 +16,10 @@ def main():
     print("Setting up models...")
     setup_models()  # Cấu hình LLM và Embedding model
 
+    # 📝 LƯU Ý QUAN TRỌNG:
+    # Khi load index từ database (pickle), các model sẽ mất private attributes (_model, _tokenizer, etc.)
+    # Do đó cần gọi lại setup_models() sau khi load để khôi phục models
+
     # Initialize database manager
     db = DatabaseManager()
 
@@ -35,6 +39,11 @@ def main():
         if law_tree and cached_indices:
             top_index, child_query_engines = cached_indices
             print("✅ Successfully loaded from database!")
+
+            # 🔧 CRITICAL: Khôi phục lại models sau khi load từ pickle
+            print("🔧 Restoring models after unpickling...")
+            setup_models()  # Khôi phục Settings.llm và Settings.embed_model
+            print("✅ Models restored successfully!")
 
             # Show database stats
             stats = db.get_database_stats()
@@ -167,16 +176,23 @@ def run_queries(query_engine):
 
                 if queries:
                     print(f"\n🔄 Processing {len(queries)} queries...")
-                    response = query_engine.multi_query(queries)
-                    print(response)
+                    if len(queries) == 1:
+                        response = query_engine.query(queries[0])
+                        print(response)
+                    else:
+                        response, result = query_engine.multi_query(queries)
+                        print("-" * 80)
+                        print("Extract result:")
+                        print(result)
+                        print("Answer:")
+                        print(response)
+                        print("-" * 80)
                 else:
                     print("❌ No queries entered.")
 
             elif user_input:
-                response, result = query_engine.query(user_input)
+                response = query_engine.query(user_input)
                 print("-" * 80)
-                print("Extract result:")
-                print(result)
                 print("Answer:")
                 print(response)
                 print("-" * 80)
