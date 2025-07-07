@@ -13,9 +13,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from llama_index.core.llms.llm import LLM
+from llama_index.llms.litellm import LiteLLM
 from pydantic import Field
 import json
 import requests
+import os
+
+os.environ["GEMINI_API_KEY"] = os.getenv("GEMINI_API_KEY")
 
 
 # Simple response classes
@@ -152,10 +156,16 @@ class OpenRouter(LLM):
 
 def setup_models():
     """Cấu hình các mô hình LLM và Embedding."""
-    Settings.llm = OpenRouter(
-        openrouter_api_key=os.getenv("API_KEY"),
-        model=os.getenv("MODEL_NAME"),
-        provider_order=["DeepInfra", "Together"],
+    # Settings.llm = OpenRouter(
+    #     openrouter_api_key=os.getenv("API_KEY"),
+    #     model=os.getenv("MODEL_NAME"),
+    #     provider_order=["DeepInfra", "Together"],
+    # )
+    Settings.llm = LiteLLM(
+        model="gemini/gemini-2.5-flash-preview-04-17",  # Model dùng LiteLLM wrapper
+        api_key=os.getenv("GEMINI_API_KEY"),
+        context_window=8192,  # Số token có thể tùy chỉnh (Gemini Pro hỗ trợ lớn)
+        max_tokens=1024,
     )
     Settings.embed_model = HuggingFaceEmbedding(
         model_name="dangvantuan/vietnamese-document-embedding", trust_remote_code=True
@@ -381,7 +391,7 @@ def summarize_nodes(nodes: List, summary_prompt_prefix: str, level: str) -> str:
     combined_text = "\n".join(node_texts)
 
     # Giới hạn độ dài input cho LLM
-    max_chars = 4000  # Giới hạn để tránh token limit
+    max_chars = 8000  # Giới hạn để tránh token limit
     if len(combined_text) > max_chars:
         combined_text = combined_text[:max_chars] + "..."
 
