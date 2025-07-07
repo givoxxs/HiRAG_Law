@@ -4,6 +4,7 @@ from llama_index.core.schema import NodeWithScore, QueryBundle  # type: ignore
 from llama_index.core.base.response.schema import Response  # type: ignore
 from typing import List, Dict, Any, Optional
 import re
+from .call_llm import GeminiLLM_instance
 
 
 class EnhancedQueryEngine:
@@ -54,12 +55,14 @@ class EnhancedQueryEngine:
             llm_response = self.basic_query_engine.query(query_str)
 
             # Format combined result
-            result = self._format_structured_response(
+            answer, result = self._format_structured_response(
                 query_str, structured_info, str(llm_response)
             )
-            all_results.append(result)
+            all_results.append(answer)
 
-        return "\n\n" + "=" * 80 + "\n\n".join(all_results)
+        return "\n\n" + "=" * 80 + "\n\n".join(
+            all_results
+        ), "\n\n" + "=" * 80 + "\n\n".join(result)
 
     def _extract_global_bridge_local(self, query_str: str) -> Dict[str, Any]:
         """
@@ -85,7 +88,7 @@ class EnhancedQueryEngine:
         self, query_bundle: QueryBundle
     ) -> List[Dict[str, str]]:
         """Extract Global level information (Chương/Phần)"""
-        top_retriever = self.top_index.as_retriever(similarity_top_k=3)
+        top_retriever = self.top_index.as_retriever(similarity_top_k=5)
         nodes = top_retriever.retrieve(query_bundle)
 
         global_info = []
@@ -131,7 +134,7 @@ class EnhancedQueryEngine:
                     {"type": "Điều", "title": title, "score": node.score}
                 )
 
-        return bridge_info[:1]  # Top 1 most relevant
+        return bridge_info[:2]  # Top 1 most relevant
 
     def _get_local_level_nodes(
         self, query_bundle: QueryBundle, bridge_nodes: List[Dict]
@@ -160,7 +163,7 @@ class EnhancedQueryEngine:
                     {"type": "Điểm", "content": content, "score": node.score}
                 )
 
-        return local_info[:2]  # Top 2 most relevant
+        return local_info[:5]  # Top 2 most relevant
 
     def _format_structured_response(
         self, query: str, structured_info: Dict, llm_response: str
@@ -187,11 +190,10 @@ class EnhancedQueryEngine:
                 result += f"  {i}. {local_item['content']}\n"
             result += "\n"
 
-        # LLM Generated Response
-        result += "🤖 **Câu trả lời**:\n"
-        result += llm_response
+        # Call LLM
+        answer = GeminiLLM_instance.call_litellm(result)
 
-        return result
+        return answer, result
 
 
 def setup_recursive_retriever(top_index, child_query_engines):

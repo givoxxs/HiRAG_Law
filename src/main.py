@@ -133,7 +133,11 @@ def run_queries(query_engine):
             print(f"  {j}. {q}")
 
         print("\nProcessing...")
-        response = query_engine.multi_query(query_set)
+        response, result = query_engine.multi_query(query_set)
+        print("-" * 80)
+        print("Extract result:")
+        print(result)
+        print("Answer:")
         print(response)
         print("-" * 80)
 
@@ -169,8 +173,13 @@ def run_queries(query_engine):
                     print("❌ No queries entered.")
 
             elif user_input:
-                response = query_engine.query(user_input)
+                response, result = query_engine.query(user_input)
+                print("-" * 80)
+                print("Extract result:")
+                print(result)
+                print("Answer:")
                 print(response)
+                print("-" * 80)
 
         except KeyboardInterrupt:
             print("\n👋 Goodbye!")
